@@ -7,16 +7,19 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-// Store sign language mappings
+// Store sign language mappings for individual letters
 const signLanguageMappings = new Map();
 
-// Initialize with some basic mappings
+// Initialize with letter mappings
 function initializeSignLanguageMappings() {
-  // Add your sign language image mappings here
-  // This should be replaced with a proper database
-  signLanguageMappings.set('hello', '/signs/hello.png');
-  signLanguageMappings.set('thank you', '/signs/thank_you.png');
-  // Add more mappings as needed
+  // Add mappings for A-Z
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+  letters.forEach(letter => {
+    signLanguageMappings.set(letter.toLowerCase(), `/signs/${letter.toLowerCase()}.png`);
+  });
+  
+  // Add space character mapping
+  signLanguageMappings.set(' ', '/signs/space.png');
 }
 
 // Handle WebSocket connections
@@ -31,14 +34,14 @@ wss.on('connection', (ws) => {
         // Process audio data
         const text = await processAudioData(data.data);
         
-        // Get corresponding sign language image
-        const signImage = getSignLanguageImage(text);
+        // Get corresponding sign language images for each letter
+        const signImages = getSignLanguageImage(text);
         
         // Send back the sign language data
         ws.send(JSON.stringify({
           type: 'sign_data',
           text: text,
-          signImageUrl: signImage
+          signImageUrls: signImages
         }));
       }
     } catch (error) {
@@ -58,9 +61,12 @@ async function processAudioData(audioData) {
   return "hello"; // Example return
 }
 
-// Get sign language image URL based on text
+// Get sign language image URLs for each letter
 function getSignLanguageImage(text) {
-  return signLanguageMappings.get(text.toLowerCase()) || '/signs/default.png';
+  const letters = text.toLowerCase().split('');
+  return letters.map(letter => 
+    signLanguageMappings.get(letter) || '/signs/default.png'
+  );
 }
 
 // Serve static files (sign language images)

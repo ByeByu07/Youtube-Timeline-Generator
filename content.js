@@ -22,7 +22,9 @@ function initializeWebSocket() {
 // Display sign language overlay
 function displaySignLanguage(signData) {
   const overlay = document.getElementById('sign-language-overlay') || createOverlay();
-  overlay.innerHTML = `<img src="${signData.signImageUrl}" alt="Sign language" />`;
+  overlay.innerHTML = signData.signImageUrls
+    .map(url => `<img src="${url}" alt="Sign language" style="height: 100px; margin: 0 5px;" />`)
+    .join('');
 }
 
 // Create overlay element
@@ -37,6 +39,10 @@ function createOverlay() {
     background: rgba(0, 0, 0, 0.8);
     padding: 10px;
     border-radius: 5px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    max-width: 80vw;
   `;
   document.body.appendChild(overlay);
   return overlay;
