@@ -1,8 +1,8 @@
-import WebSocket from 'ws';
+import WebSocket, { WebSocketServer } from 'ws';
 import express from 'express';
 import http from 'http';
 import path from 'path';
-import AssemblyAI from 'assemblyai';
+import { AssemblyAI } from 'assemblyai';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
@@ -22,7 +22,7 @@ interface AudioMessage {
 
 const app = express();
 const server = http.createServer(app);
-const wss = new WebSocket.Server({ server });
+const wss = new WebSocketServer({ server });
 
 // Store sign language mappings for individual letters
 const signLanguageMappings: Map<string, string> = new Map();
@@ -46,7 +46,7 @@ wss.on('connection', (ws: WebSocket) => {
   ws.on('message', async (message: WebSocket.Data) => {
     try {
       const data = JSON.parse(message.toString()) as AudioMessage;
-      
+      console.log(data)
       if (data.type === 'audio_data') {
         // Process audio data
         const text = await processAudioData(data.data);
