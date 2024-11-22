@@ -3,11 +3,13 @@ let socket = null;
 
 // Initialize WebSocket connection
 function initializeWebSocket() {
-  socket = new WebSocket('ws://localhost:3000');
-  
-  socket.onopen = () => {
-    console.log('Connected to WebSocket server');
-  };
+  try {
+    socket = new WebSocket('ws://localhost:3000');
+    
+    socket.onopen = () => {
+      console.log('Connected to WebSocket server');
+      startAudioCapture(); // Start audio capture once connection is established
+    };
 
   socket.onmessage = (event) => {
     const signData = JSON.parse(event.data);
@@ -68,8 +70,15 @@ let audioContext = null;
 
 async function startAudioCapture() {
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    audioContext = new AudioContext();
+    console.log('Starting audio capture...');
+    const stream = await navigator.mediaDevices.getUserMedia({ 
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        sampleRate: 44100
+      } 
+    });
+    audioContext = new AudioContext({ sampleRate: 44100 });
     const source = audioContext.createMediaStreamSource(stream);
     
     // Create analyzer node

@@ -22,7 +22,10 @@ interface AudioMessage {
 
 const app = express();
 const server = http.createServer(app);
-const wss = new WebSocketServer({ server });
+const wss = new WebSocketServer({ 
+  server,
+  perMessageDeflate: false // Disable compression for audio data
+});
 
 // Store sign language mappings for individual letters
 const signLanguageMappings: Map<string, string> = new Map();
