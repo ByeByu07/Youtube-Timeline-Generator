@@ -2,6 +2,7 @@ const WebSocket = require('ws');
 const express = require('express');
 const http = require('http');
 const path = require('path');
+const AssemblyAI = require('assemblyai');
 
 const app = express();
 const server = http.createServer(app);
@@ -54,11 +55,39 @@ wss.on('connection', (ws) => {
   });
 });
 
-// Process audio data (placeholder - implement your audio processing logic)
+// Initialize AssemblyAI client
+const client = new AssemblyAI.Client("YOUR-API-KEY-HERE");
+
+// Process audio data using AssemblyAI
 async function processAudioData(audioData) {
-  // Here you would implement speech-to-text conversion
-  // This is a placeholder that should be replaced with actual STT implementation
-  return "hello"; // Example return
+  try {
+    // Convert Float32Array to proper audio format (16-bit PCM)
+    const audioBuffer = convertFloat32ToInt16(audioData);
+    
+    // Create a temporary audio file or stream
+    const params = {
+      audio: audioBuffer,
+      sample_rate: 44100, // Match your AudioContext sample rate
+    };
+
+    // Send to AssemblyAI for real-time transcription
+    const transcript = await client.transcribe(params);
+    
+    return transcript.text || '';
+  } catch (error) {
+    console.error('Error in speech-to-text:', error);
+    return '';
+  }
+}
+
+// Helper function to convert Float32Array to Int16Array
+function convertFloat32ToInt16(float32Array) {
+  const int16Array = new Int16Array(float32Array.length);
+  for (let i = 0; i < float32Array.length; i++) {
+    const s = Math.max(-1, Math.min(1, float32Array[i]));
+    int16Array[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+  }
+  return int16Array;
 }
 
 // Get sign language image URLs for each letter
