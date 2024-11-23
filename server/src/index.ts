@@ -5,11 +5,16 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { config } from 'dotenv';
 import ytdl from 'ytdl-core';
-import { AssemblyAI } from '@assemblyai/sdk';
+import { AssemblyAI } from 'assemblyai';
 
+config();
 // Initialize AssemblyAI client
+const apiKey = process.env.ASSEMBLY_AI_API_KEY;
+if (!apiKey) {
+  throw new Error('ASSEMBLY_AI_API_KEY is not defined');
+}
 const client = new AssemblyAI({
-  apiKey: process.env.ASSEMBLY_AI_API_KEY
+  apiKey: apiKey
 });
 
 interface TimelineSection {
@@ -22,7 +27,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Environment configuration
-config();
 
 // Express app setup
 const app = express();
