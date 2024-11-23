@@ -121,6 +121,7 @@ const YouTubeTranscriber = () => {
         </div>
       </div>
     </div>
+  )
 };
 
 export default YouTubeTranscriber;
