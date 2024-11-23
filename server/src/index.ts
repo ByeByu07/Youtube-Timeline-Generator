@@ -5,17 +5,19 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { config } from 'dotenv';
 import ytdl from 'ytdl-core';
-import { AssemblyAI } from 'assemblyai';
+import axios from 'axios';
+import fs from 'fs';
+import os from 'os';
 
 config();
-// Initialize AssemblyAI client
+
+// Initialize AssemblyAI configuration
 const apiKey = process.env.ASSEMBLY_AI_API_KEY;
 if (!apiKey) {
   throw new Error('ASSEMBLY_AI_API_KEY is not defined');
 }
-const client = new AssemblyAI({
-  apiKey: apiKey
-});
+
+const ASSEMBLY_AI_API = 'https://api.assemblyai.com/v2';
 
 interface TimelineSection {
   timestamp: string;
@@ -44,27 +46,82 @@ const formatTimestamp = (seconds: number): string => {
   return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
 };
 
+// Function to upload audio file to AssemblyAI
+async function uploadAudio(audioPath: string): Promise<string> {
+  const data = fs.readFileSync(audioPath);
+  const response = await axios.post(`${ASSEMBLY_AI_API}/upload`,
+    data,
+    {
+      headers: {
+        'authorization': apiKey,
+        'Content-Type': 'application/octet-stream'
+      }
+    }
+  );
+  return response.data.upload_url;
+}
+
+// Function to create and wait for transcript
+async function createAndWaitForTranscript(audioUrl: string): Promise<any> {
+  // Create transcript
+  const response = await axios.post(`${ASSEMBLY_AI_API}/transcript`, {
+    audio_url: audioUrl,
+    auto_chapters: true
+  }, {
+    headers: {
+      'authorization': apiKey,
+      'Content-Type': 'application/json'
+    }
+  });
+
+  const transcriptId = response.data.id;
+  
+  // Poll for transcript completion
+  while (true) {
+    const pollingResponse = await axios.get(`${ASSEMBLY_AI_API}/transcript/${transcriptId}`, {
+      headers: { 'authorization': apiKey }
+    });
+    
+    if (pollingResponse.data.status === 'completed') {
+      return pollingResponse.data;
+    } else if (pollingResponse.data.status === 'error') {
+      throw new Error('Transcript processing failed');
+    }
+    
+    await new Promise(resolve => setTimeout(resolve, 3000));
+  }
+}
+
 // Function to process YouTube video
 async function processYouTubeVideo(url: string): Promise<TimelineSection[]> {
   try {
+    // Create temporary file path
+    const tempDir = os.tmpdir();
+    const tempFile = path.join(tempDir, `youtube-${Date.now()}.mp4`);
+
     // Download audio from YouTube
-    const audioStream = ytdl(url, { quality: 'lowestaudio' });
-    
-    // Create a transcript using AssemblyAI
-    const transcript = await client.transcripts.create({
-      audio: audioStream,
-      auto_chapters: true
+    await new Promise((resolve, reject) => {
+      ytdl(url, { quality: 'lowestaudio' })
+        .pipe(fs.createWriteStream(tempFile))
+        .on('finish', resolve)
+        .on('error', reject);
     });
 
-    // Wait for the transcript to complete
-    const result = await client.transcripts.wait(transcript.id);
-    
+    // Upload to AssemblyAI
+    const uploadUrl = await uploadAudio(tempFile);
+
+    // Create and wait for transcript
+    const result = await createAndWaitForTranscript(uploadUrl);
+
+    // Clean up temporary file
+    fs.unlinkSync(tempFile);
+
     if (!result.chapters || result.chapters.length === 0) {
       throw new Error('No chapters were generated for this video');
     }
 
     // Format the chapters into timeline sections
-    return result.chapters.map((chapter, index) => ({
+    return result.chapters.map((chapter: any, index: number) => ({
       timestamp: formatTimestamp(chapter.start / 1000),
       text: `Chapter ${(index + 1).toString().padStart(2, '0')}: ${chapter.headline}`
     }));
