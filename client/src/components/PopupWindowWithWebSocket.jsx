@@ -1,255 +1,126 @@
-import React, { useEffect, useState } from 'react';
-// import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { MessageSquare, Users, Bell } from 'lucide-react';
+import React, { useState } from 'react';
+import { YoutubeIcon } from 'lucide-react';
 
-const PopupWindowWithWebSocket = () => {
-  const [isMainWindow, setIsMainWindow] = useState(true);
-  const [popupWindow, setPopupWindow] = useState(null);
-  const [showAlert, setShowAlert] = useState(false);
-  const [ws, setWs] = useState(null);
-  const [wsStatus, setWsStatus] = useState('disconnected');
-  const [participants, setParticipants] = useState([]);
-  const [messages, setMessages] = useState([]);
-  const [userId] = useState(`user-${Math.random().toString(36).substr(2, 9)}`);
+const YouTubeTranscriber = () => {
+  const [url, setUrl] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  useEffect(() => {
-    // Check if this is already a popup window
-    setIsMainWindow(window.opener === null);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
 
-    // Initialize WebSocket
-    const socket = new WebSocket('ws://localhost:8080');
-    setWs(socket);
+    try {
+      const response = await fetch('http://localhost:3000/api/transcribe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url }),
+      });
 
-    socket.onopen = () => {
-      setWsStatus('connected');
-      // Send initial presence
-      socket.send(JSON.stringify({
-        type: 'join',
-        userId,
-        isPopup: !window.opener
-      }));
-    };
-
-    socket.onclose = () => {
-      setWsStatus('disconnected');
-    };
-
-    socket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      handleWebSocketMessage(data);
-    };
-
-    // Handle visibility change
-    const handleVisibilityChange = () => {
-      if (document.hidden && isMainWindow && !popupWindow) {
-        createPopupWindow();
+      if (!response.ok) {
+        throw new Error('Failed to process video');
       }
-    };
 
-    // Handle popup close
-    const handlePopupClose = () => {
-      setPopupWindow(null);
-      setShowAlert(false);
-      // Notify others that popup was closed
-      if (socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({
-          type: 'popupClosed',
-          userId
-        }));
-      }
-    };
-
-    // Setup event listeners
-    if (isMainWindow) {
-      document.addEventListener('visibilitychange', handleVisibilityChange);
-      window.addEventListener('beforeunload', closePopupWindow);
-    }
-
-    // Synchronize state between windows using localStorage
-    window.addEventListener('storage', handleStorageChange);
-
-    return () => {
-      if (isMainWindow) {
-        document.removeEventListener('visibilitychange', handleVisibilityChange);
-        window.removeEventListener('beforeunload', closePopupWindow);
-        closePopupWindow();
-      }
-      window.removeEventListener('storage', handleStorageChange);
-      socket.close();
-    };
-  }, [isMainWindow, popupWindow, userId]);
-
-  const handleWebSocketMessage = (data) => {
-    switch (data.type) {
-      case 'participants':
-        setParticipants(data.participants);
-        break;
-      case 'message':
-        setMessages(prev => [...prev, data]);
-        // Sync messages between windows
-        localStorage.setItem('meetingMessages', JSON.stringify([...messages, data]));
-        break;
-      case 'userJoined':
-      case 'userLeft':
-        // Update participants list
-        setParticipants(data.participants);
-        break;
-      default:
-        break;
+      // Handle successful response
+      setUrl('');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleStorageChange = (e) => {
-    if (e.key === 'meetingMessages') {
-      setMessages(JSON.parse(e.newValue));
-    }
-  };
+  const quotes = [
+    "Transform your YouTube content into text with ease",
+    "Unlock the power of video transcription",
+    "Make your content accessible to everyone",
+  ];
 
-  const createPopupWindow = () => {
-    const width = window.screen.width / 4 || 800;
-    const height = window.screen.height / 2 || 600;
-    const left = window.screen.width / 2 - width / 2;
-    const top = window.screen.height / 2 - height / 2;
-
-    const popup = window.open(
-      window.location.href,
-      'MeetingPopup',
-      `width=${width},height=${height},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no`
-    );
-
-    if (popup) {
-      setPopupWindow(popup);
-      
-      const checkPopup = setInterval(() => {
-        if (popup.closed) {
-          clearInterval(checkPopup);
-          handlePopupClose();
-        }
-      }, 1000);
-
-      popup.focus();
-      setShowAlert(true);
-
-      // Notify others about popup
-      if (ws?.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({
-          type: 'popupCreated',
-          userId
-        }));
-      }
-    }
-  };
-
-  const closePopupWindow = () => {
-    if (popupWindow && !popupWindow.closed) {
-      popupWindow.close();
-    }
-    setPopupWindow(null);
-    setShowAlert(false);
-  };
-
-  const sendMessage = (message) => {
-    if (ws?.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({
-        type: 'message',
-        userId,
-        message,
-        timestamp: new Date().toISOString()
-      }));
-    }
-  };
-
-  const renderMeetingContent = () => (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between p-4 bg-gray-100 rounded-lg">
-        <div className="flex items-center gap-2">
-          <div className={`w-3 h-3 rounded-full ${wsStatus === 'connected' ? 'bg-green-500' : 'bg-red-500'}`} />
-          <span>WebSocket: {wsStatus}</span>
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-3xl mx-auto">
+        {/* Header Section */}
+        <div className="text-center mb-12">
+          <YoutubeIcon className="w-16 h-16 text-red-600 mx-auto mb-4" />
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+            YouTube Transcriber
+          </h1>
+          <p className="text-xl text-gray-600">
+            {quotes[Math.floor(Math.random() * quotes.length)]}
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Users className="w-5 h-5" />
-          <span>{participants.length} participants</span>
-        </div>
-      </div>
 
-      <div className="border rounded-lg p-4">
-        <h3 className="font-semibold mb-2 flex items-center gap-2">
-          <MessageSquare className="w-5 h-5" />
-          Chat Messages
-        </h3>
-        <div className="h-48 overflow-y-auto border rounded p-2 mb-2">
-          {messages.map((msg, idx) => (
-            <div key={idx} className="mb-2">
-              <span className="font-semibold">{msg.userId === userId ? 'You' : msg.userId}: </span>
-              <span>{msg.message}</span>
+        {/* Form Section */}
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="url" className="block text-sm font-medium text-gray-700 mb-2">
+                YouTube URL
+              </label>
+              <div className="flex gap-4">
+                <input
+                  type="url"
+                  id="url"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  className="flex-1 block w-full rounded-lg border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-3 border"
+                  required
+                />
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className={`px-6 py-3 rounded-lg text-white font-medium ${
+                    isLoading
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
+                  }`}
+                >
+                  {isLoading ? 'Processing...' : 'Transcribe'}
+                </button>
+              </div>
+            </div>
+          </form>
+
+          {error && (
+            <div className="mt-4 p-4 bg-red-50 rounded-lg">
+              <p className="text-red-600">{error}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Features Section */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[
+            {
+              title: 'Fast Processing',
+              description: 'Get your transcription results quickly and efficiently',
+            },
+            {
+              title: 'High Accuracy',
+              description: 'Advanced AI ensures precise transcription results',
+            },
+            {
+              title: 'Easy to Use',
+              description: 'Simply paste your YouTube URL and click transcribe',
+            },
+          ].map((feature, index) => (
+            <div
+              key={index}
+              className="bg-white rounded-lg p-6 shadow-md hover:shadow-lg transition-shadow"
+            >
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                {feature.title}
+              </h3>
+              <p className="text-gray-600">{feature.description}</p>
             </div>
           ))}
         </div>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            className="flex-1 px-3 py-2 border rounded"
-            placeholder="Type a message..."
-            onKeyPress={(e) => e.key === 'Enter' && sendMessage(e.target.value)}
-          />
-          <button
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-            onClick={() => {
-              const input = document.querySelector('input');
-              if (input.value) {
-                sendMessage(input.value);
-                input.value = '';
-              }
-            }}
-          >
-            Send
-          </button>
-        </div>
       </div>
     </div>
-  );
-
-  // If this is the popup window, render the meeting content
-  if (!isMainWindow) {
-    return (
-      <div className="p-4">
-        <h1 className="text-2xl font-bold mb-4">Meeting Window</h1>
-        {renderMeetingContent()}
-      </div>
-    );
-  }
-
-  // Main window content
-  return (
-    <div className="p-4">
-      {showAlert ? (
-        <Alert className="mb-4">
-          <Bell className="w-4 h-4" />
-          <AlertTitle>Meeting Popped Out</AlertTitle>
-          <AlertDescription>
-            Your meeting has been moved to a separate window.
-            <button 
-              onClick={() => popupWindow?.focus()}
-              className="ml-2 text-blue-500 hover:text-blue-700 underline"
-            >
-              Click here to focus the meeting window
-            </button>
-          </AlertDescription>
-        </Alert>
-      ) : (
-        <div>
-          <h2 className="text-lg font-semibold mb-4">Meeting Window</h2>
-          {renderMeetingContent()}
-          <button 
-            onClick={createPopupWindow}
-            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-          >
-            Pop Out Meeting
-          </button>
-        </div>
-      )}
-    </div>
-  );
 };
 
-export default PopupWindowWithWebSocket;
+export default YouTubeTranscriber;
