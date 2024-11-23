@@ -133,24 +133,53 @@ async function processYouTubeVideo(url: string): Promise<TimelineSection[]> {
     // Download audio from YouTube
     console.log('Downloading audio...');
     await new Promise((resolve, reject) => {
+      const writeStream = fs.createWriteStream(tempFile);
       const stream = ytdl(url, { 
         quality: 'lowestaudio',
         filter: 'audioonly' 
       });
 
+      // Handle stream events
       stream.on('info', (info) => {
         console.log('Video info received:', info.videoDetails.title);
       });
 
-      stream.pipe(fs.createWriteStream(tempFile))
-        .on('finish', () => {
-          console.log('Audio download completed');
-          resolve(null);
-        })
+      stream.on('error', (err) => {
+        console.error('Error in ytdl stream:', err);
+        writeStream.end();
+        reject(err);
+      });
+
+      // Handle write stream events
+      writeStream.on('error', (err) => {
+        console.error('Error in write stream:', err);
+        stream.destroy();
+        reject(err);
+      });
+
+      writeStream.on('finish', () => {
+        console.log('Audio download completed');
+        resolve(null);
+      });
+
+      // Pipe with error handling
+      stream.pipe(writeStream)
         .on('error', (err) => {
-          console.error('Error downloading audio:', err);
+          console.error('Error in pipe:', err);
+          stream.destroy();
+          writeStream.end();
           reject(err);
         });
+
+      // Set timeout
+      const timeout = setTimeout(() => {
+        stream.destroy();
+        writeStream.end();
+        reject(new Error('Download timeout after 5 minutes'));
+      }, 5 * 60 * 1000); // 5 minutes timeout
+
+      // Clear timeout on success
+      writeStream.on('finish', () => clearTimeout(timeout));
     });
 
     // Upload to AssemblyAI
