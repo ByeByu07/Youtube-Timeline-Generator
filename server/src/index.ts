@@ -19,9 +19,25 @@ if (!apiKey) {
 
 const ASSEMBLY_AI_API = 'https://api.assemblyai.com/v2';
 
+// Type definitions
 interface TimelineSection {
   timestamp: string;
   text: string;
+}
+
+interface AssemblyAIChapter {
+  start: number;
+  headline: string;
+}
+
+interface AssemblyAIResponse {
+  id: string;
+  status: string;
+  chapters?: AssemblyAIChapter[];
+}
+
+interface AssemblyAIUploadResponse {
+  upload_url: string;
 }
 
 // ES Module compatibility
@@ -49,7 +65,8 @@ const formatTimestamp = (seconds: number): string => {
 // Function to upload audio file to AssemblyAI
 async function uploadAudio(audioPath: string): Promise<string> {
   const data = fs.readFileSync(audioPath);
-  const response = await axios.post(`${ASSEMBLY_AI_API}/upload`,
+  const response = await axios.post<AssemblyAIUploadResponse>(
+    `${ASSEMBLY_AI_API}/upload`,
     data,
     {
       headers: {
@@ -62,9 +79,9 @@ async function uploadAudio(audioPath: string): Promise<string> {
 }
 
 // Function to create and wait for transcript
-async function createAndWaitForTranscript(audioUrl: string): Promise<any> {
+async function createAndWaitForTranscript(audioUrl: string): Promise<AssemblyAIResponse> {
   // Create transcript
-  const response = await axios.post(`${ASSEMBLY_AI_API}/transcript`, {
+  const response = await axios.post<AssemblyAIResponse>(`${ASSEMBLY_AI_API}/transcript`, {
     audio_url: audioUrl,
     auto_chapters: true
   }, {
@@ -78,7 +95,7 @@ async function createAndWaitForTranscript(audioUrl: string): Promise<any> {
   
   // Poll for transcript completion
   while (true) {
-    const pollingResponse = await axios.get(`${ASSEMBLY_AI_API}/transcript/${transcriptId}`, {
+    const pollingResponse = await axios.get<AssemblyAIResponse>(`${ASSEMBLY_AI_API}/transcript/${transcriptId}`, {
       headers: { 'authorization': apiKey }
     });
     
@@ -121,7 +138,7 @@ async function processYouTubeVideo(url: string): Promise<TimelineSection[]> {
     }
 
     // Format the chapters into timeline sections
-    return result.chapters.map((chapter: any, index: number) => ({
+    return result.chapters!.map((chapter: AssemblyAIChapter, index: number) => ({
       timestamp: formatTimestamp(chapter.start / 1000),
       text: `Chapter ${(index + 1).toString().padStart(2, '0')}: ${chapter.headline}`
     }));
