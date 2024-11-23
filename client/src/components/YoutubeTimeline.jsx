@@ -14,7 +14,8 @@ const YoutubeTimeline = () => {
 
     try {
       console.log('Submitting URL:', url);
-
+      console.log('Making request to server...');
+      
       const response = await fetch('http://localhost:8080/api/transcribe', {
         method: 'POST',
         headers: {

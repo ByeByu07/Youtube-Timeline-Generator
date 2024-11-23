@@ -51,9 +51,20 @@ const app = express();
 const server = createServer(app);
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:5173', // Vite's default port
+  methods: ['GET', 'POST'],
+  credentials: true
+}));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Log all incoming requests
+app.use((req: Request, res: Response, next: NextFunction) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
+});
 
 // Utility function to format seconds to timestamp
 const formatTimestamp = (seconds: number): string => {
@@ -175,9 +186,10 @@ app.get('/api/health', (req: Request, res: Response) => {
 });
 
 // YouTube processing route
-//@ts-ignore
 app.post('/api/transcribe', async (req: Request, res: Response) => {
-  console.log('Received transcribe request');
+  console.log('=== Transcribe Request Started ===');
+  console.log('Request headers:', req.headers);
+  console.log('Request body:', req.body);
   try {
     const { url } = req.body;
     console.log('Received URL:', url);
