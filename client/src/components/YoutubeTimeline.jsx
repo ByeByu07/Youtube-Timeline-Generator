@@ -13,7 +13,7 @@ const YoutubeTimeline = () => {
     setError('');
 
     try {
-      console.log(url)
+      console.log('Submitting URL:', url);
 
       const response = await fetch('http://localhost:8080/api/transcribe', {
         method: 'POST',
@@ -23,16 +23,20 @@ const YoutubeTimeline = () => {
         body: JSON.stringify({ url }),
       });
 
-      console.log(response)
+      console.log('Response status:', response.status);
+      
+      const data = await response.json();
+      console.log('Response data:', data);
+
       if (!response.ok) {
-        throw new Error('Failed to process video');
+        throw new Error(data.details || data.error || 'Failed to process video');
       }
 
-      const data = await response.json();
       setTimeline(data.timeline || []);
       setUrl('');
     } catch (err) {
-      setError(err.message);
+      console.error('Error details:', err);
+      setError(err.message || 'An unexpected error occurred');
     } finally {
       setIsLoading(false);
     }

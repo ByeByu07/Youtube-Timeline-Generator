@@ -112,16 +112,34 @@ async function createAndWaitForTranscript(audioUrl: string): Promise<AssemblyAIR
 // Function to process YouTube video
 async function processYouTubeVideo(url: string): Promise<TimelineSection[]> {
   try {
+    console.log('Starting YouTube video processing for:', url);
+    
     // Create temporary file path
     const tempDir = os.tmpdir();
     const tempFile = path.join(tempDir, `youtube-${Date.now()}.mp4`);
+    console.log('Temporary file path:', tempFile);
 
     // Download audio from YouTube
+    console.log('Downloading audio...');
     await new Promise((resolve, reject) => {
-      ytdl(url, { quality: 'lowestaudio' })
-        .pipe(fs.createWriteStream(tempFile))
-        .on('finish', resolve)
-        .on('error', reject);
+      const stream = ytdl(url, { 
+        quality: 'lowestaudio',
+        filter: 'audioonly' 
+      });
+
+      stream.on('info', (info) => {
+        console.log('Video info received:', info.videoDetails.title);
+      });
+
+      stream.pipe(fs.createWriteStream(tempFile))
+        .on('finish', () => {
+          console.log('Audio download completed');
+          resolve(null);
+        })
+        .on('error', (err) => {
+          console.error('Error downloading audio:', err);
+          reject(err);
+        });
     });
 
     // Upload to AssemblyAI
@@ -159,21 +177,37 @@ app.get('/api/health', (req: Request, res: Response) => {
 // YouTube processing route
 //@ts-ignore
 app.post('/api/transcribe', async (req: Request, res: Response) => {
+  console.log('Received transcribe request');
   try {
     const { url } = req.body;
-    console.log(url)
+    console.log('Received URL:', url);
     
     if (!url) {
+      console.log('URL is missing in request');
       return res.status(400).json({ error: 'URL is required' });
     }
 
-    console.log('yey1');
+    if (!ytdl.validateURL(url)) {
+      console.log('Invalid YouTube URL:', url);
+      return res.status(400).json({ error: 'Invalid YouTube URL' });
+    }
+
+    console.log('Starting video processing...');
     const timeline = await processYouTubeVideo(url);
-    console.log('yey');
+    console.log('Video processing completed');
+    console.log('Timeline:', timeline);
+    
     res.json({ timeline });
-  } catch (error) {
-    console.error('Error:', error);
-    res.status(500).json({ error: 'Failed to process video' });
+  } catch (error: any) {
+    console.error('Detailed error:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+    res.status(500).json({ 
+      error: 'Failed to process video',
+      details: error.message 
+    });
   }
 });
 
