@@ -1,37 +1,20 @@
 import express, { Request, Response, NextFunction } from 'express';
 import { createServer } from 'http';
-import { WebSocket, WebSocketServer } from 'ws';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { config } from 'dotenv';
+import ytdl from 'ytdl-core';
+import { AssemblyAI } from '@assemblyai/sdk';
 
-// Types and Interfaces
-interface CustomWebSocket extends WebSocket {
-  isAlive: boolean;
-  userId?: string;
-}
+// Initialize AssemblyAI client
+const client = new AssemblyAI({
+  apiKey: process.env.ASSEMBLY_AI_API_KEY
+});
 
-interface WSMessage {
-  type: 'join' | 'message' | 'popupCreated' | 'popupClosed';
-  userId: string;
-  message?: string;
-  timestamp?: string;
-}
-
-interface ChatMessage {
-  type: 'message';
-  userId: string;
-  message: string;
+interface TimelineSection {
   timestamp: string;
-}
-
-interface ServerResponse {
-  type: string;
-  userId?: string;
-  participants?: string[];
-  message?: string;
-  timestamp?: string;
+  text: string;
 }
 
 // ES Module compatibility
@@ -44,144 +27,70 @@ config();
 // Express app setup
 const app = express();
 const server = createServer(app);
-const wss = new WebSocketServer({ server });
-
-// Connected clients map
-const clients: Map<string, CustomWebSocket> = new Map();
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Utility functions
-const broadcast = (message: ServerResponse, exclude: string | null = null): void => {
-  const data = JSON.stringify(message);
-  clients.forEach((client, userId) => {
-    if (userId !== exclude && client.readyState === WebSocket.OPEN) {
-      client.send(data);
-    }
-  });
+// Utility function to format seconds to timestamp
+const formatTimestamp = (seconds: number): string => {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = Math.floor(seconds % 60);
+  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
 };
 
-const getParticipants = (): string[] => {
-  return Array.from(clients.keys());
-};
-
-const handleError = (error: Error, ws: CustomWebSocket): void => {
-  console.error('WebSocket error:', error);
-  if (ws.userId) {
-    clients.delete(ws.userId);
-    broadcast({
-      type: 'userLeft',
-      userId: ws.userId,
-      participants: getParticipants()
+// Function to process YouTube video
+async function processYouTubeVideo(url: string): Promise<TimelineSection[]> {
+  try {
+    // Download audio from YouTube
+    const audioStream = ytdl(url, { quality: 'lowestaudio' });
+    
+    // Create a transcript using AssemblyAI
+    const transcript = await client.transcripts.create({
+      audio: audioStream,
+      auto_chapters: true
     });
+
+    // Wait for the transcript to complete
+    const result = await client.transcripts.wait(transcript.id);
+    
+    if (!result.chapters || result.chapters.length === 0) {
+      throw new Error('No chapters were generated for this video');
+    }
+
+    // Format the chapters into timeline sections
+    return result.chapters.map((chapter, index) => ({
+      timestamp: formatTimestamp(chapter.start / 1000),
+      text: `Chapter ${(index + 1).toString().padStart(2, '0')}: ${chapter.headline}`
+    }));
+
+  } catch (error) {
+    console.error('Error processing video:', error);
+    throw new Error('Failed to process video');
   }
-};
-
-// WebSocket connection handling
-wss.on('connection', (ws: CustomWebSocket) => {
-  ws.isAlive = true;
-
-  // Connection health check
-  ws.on('pong', () => {
-    ws.isAlive = true;
-  });
-
-  // Message handling
-  ws.on('message', (data: Buffer) => {
-    try {
-      const message: WSMessage = JSON.parse(data.toString());
-      
-      switch (message.type) {
-        case 'join': {
-          ws.userId = message.userId;
-          clients.set(message.userId, ws);
-          
-          // Send current participants to new user
-          ws.send(JSON.stringify({
-            type: 'participants',
-            participants: getParticipants()
-          }));
-          
-          // Notify others
-          broadcast({
-            type: 'userJoined',
-            userId: message.userId,
-            participants: getParticipants()
-          }, message.userId);
-          break;
-        }
-
-        case 'message': {
-          const chatMessage: ChatMessage = {
-            type: 'message',
-            userId: message.userId,
-            message: message.message!,
-            timestamp: new Date().toISOString()
-          };
-          broadcast(chatMessage);
-          break;
-        }
-
-        case 'popupCreated':
-        case 'popupClosed': {
-          broadcast({
-            type: message.type,
-            userId: message.userId
-          }, message.userId);
-          break;
-        }
-      }
-    } catch (error) {
-      handleError(error as Error, ws);
-    }
-  });
-
-  // Handle disconnection
-  ws.on('close', () => {
-    if (ws.userId) {
-      clients.delete(ws.userId);
-      broadcast({
-        type: 'userLeft',
-        userId: ws.userId,
-        participants: getParticipants()
-      });
-    }
-  });
-
-  // Handle errors
-  ws.on('error', (error) => handleError(error, ws));
-});
-
-// Health check interval
-const interval = setInterval(() => {
-  wss.clients.forEach((client) => {
-    const ws = client as CustomWebSocket;
-    if (ws.isAlive === false) {
-      return ws.terminate();
-    }
-    ws.isAlive = false;
-    ws.ping();
-  });
-}, 30000);
-
-wss.on('close', () => {
-  clearInterval(interval);
-});
+}
 
 // API Routes
 app.get('/api/health', (req: Request, res: Response) => {
-  res.json({ status: 'ok', connections: clients.size });
+  res.json({ status: 'ok' });
 });
 
-// Meeting room routes
-app.get('/api/room/:roomId', (req: Request, res: Response) => {
-  const roomId = req.params.roomId;
-  const participants = Array.from(clients.keys())
-    .filter(userId => userId.startsWith(roomId));
-  res.json({ participants });
+// YouTube processing route
+app.post('/api/transcribe', async (req: Request, res: Response) => {
+  try {
+    const { url } = req.body;
+    
+    if (!url) {
+      return res.status(400).json({ error: 'URL is required' });
+    }
+
+    const timeline = await processYouTubeVideo(url);
+    res.json({ timeline });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ error: 'Failed to process video' });
+  }
 });
 
 // Error handling middleware
