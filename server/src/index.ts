@@ -137,6 +137,8 @@ async function processYouTubeVideo(url: string): Promise<TimelineSection[]> {
       throw new Error('No chapters were generated for this video');
     }
 
+    console.log('unlink');
+
     // Format the chapters into timeline sections
     return result.chapters!.map((chapter: AssemblyAIChapter, index: number) => ({
       timestamp: formatTimestamp(chapter.start / 1000),
@@ -155,15 +157,19 @@ app.get('/api/health', (req: Request, res: Response) => {
 });
 
 // YouTube processing route
+//@ts-ignore
 app.post('/api/transcribe', async (req: Request, res: Response) => {
   try {
     const { url } = req.body;
+    console.log(url)
     
     if (!url) {
       return res.status(400).json({ error: 'URL is required' });
     }
 
+    console.log('yey1');
     const timeline = await processYouTubeVideo(url);
+    console.log('yey');
     res.json({ timeline });
   } catch (error) {
     console.error('Error:', error);

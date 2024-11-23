@@ -13,7 +13,9 @@ const YoutubeTimeline = () => {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:3000/api/transcribe', {
+      console.log(url)
+
+      const response = await fetch('http://localhost:8080/api/transcribe', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -21,6 +23,7 @@ const YoutubeTimeline = () => {
         body: JSON.stringify({ url }),
       });
 
+      console.log(response)
       if (!response.ok) {
         throw new Error('Failed to process video');
       }
