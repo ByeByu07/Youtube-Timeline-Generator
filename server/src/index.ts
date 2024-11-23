@@ -186,6 +186,7 @@ app.get('/api/health', (req: Request, res: Response) => {
 });
 
 // YouTube processing route
+//@ts-ignore
 app.post('/api/transcribe', async (req: Request, res: Response) => {
   console.log('=== Transcribe Request Started ===');
   console.log('Request headers:', req.headers);
