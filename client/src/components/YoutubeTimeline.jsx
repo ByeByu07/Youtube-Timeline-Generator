@@ -5,10 +5,7 @@ const YoutubeTimeline = () => {
   const [url, setUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [description, setDescription] = useState('');
-  const [sections, setSections] = useState([
-    { title: '', timestamp: '', content: '' }
-  ]);
+  const [timeline, setTimeline] = useState([]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -28,7 +25,8 @@ const YoutubeTimeline = () => {
         throw new Error('Failed to process video');
       }
 
-      // Handle successful response
+      const data = await response.json();
+      setTimeline(data.timeline || []);
       setUrl('');
     } catch (err) {
       setError(err.message);
@@ -38,9 +36,9 @@ const YoutubeTimeline = () => {
   };
 
   const quotes = [
-    "Transform your YouTube content into text with ease",
-    "Unlock the power of video transcription",
-    "Make your content accessible to everyone",
+    "Generate accurate video timelines automatically",
+    "Navigate your YouTube content with precision",
+    "Create professional video chapters in seconds",
   ];
 
   return (
@@ -96,106 +94,53 @@ const YoutubeTimeline = () => {
           )}
         </div>
 
-        {/* Description Generator Section */}
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-          <h2 className="text-xl font-semibold mb-4">Description Sections Generator</h2>
-          <div className="space-y-4">
-            {sections.map((section, index) => (
-              <div key={index} className="space-y-2">
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="Section Title"
-                    value={section.title}
-                    onChange={(e) => {
-                      const newSections = [...sections];
-                      newSections[index].title = e.target.value;
-                      setSections(newSections);
-                    }}
-                    className="flex-1 rounded-lg border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2 border"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Timestamp (00:00)"
-                    value={section.timestamp}
-                    onChange={(e) => {
-                      const newSections = [...sections];
-                      newSections[index].timestamp = e.target.value;
-                      setSections(newSections);
-                    }}
-                    className="w-32 rounded-lg border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2 border"
-                  />
-                </div>
-                <textarea
-                  placeholder="Section Content"
-                  value={section.content}
-                  onChange={(e) => {
-                    const newSections = [...sections];
-                    newSections[index].content = e.target.value;
-                    setSections(newSections);
-                  }}
-                  className="w-full rounded-lg border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2 border"
-                  rows="2"
-                />
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 flex justify-between">
-            <button
-              type="button"
-              onClick={() => setSections([...sections, { title: '', timestamp: '', content: '' }])}
-              className="px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-700"
-            >
-              + Add Section
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                const generatedDescription = sections
-                  .map(section => `${section.timestamp} ${section.title}\n${section.content}`)
-                  .join('\n\n');
-                setDescription(generatedDescription);
-              }}
-              className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
-            >
-              Generate Description
-            </button>
-          </div>
-          {description && (
-            <div className="mt-4">
-              <div className="flex justify-between items-center mb-2">
-                <h3 className="font-medium">Generated Description</h3>
-                <button
-                  onClick={() => navigator.clipboard.writeText(description)}
-                  className="text-blue-600 hover:text-blue-700 flex items-center gap-1"
-                >
-                  <Copy className="w-4 h-4" /> Copy
-                </button>
-              </div>
-              <textarea
-                value={description}
-                readOnly
-                className="w-full rounded-lg border-gray-300 shadow-sm bg-gray-50 sm:text-sm p-2 border"
-                rows="6"
-              />
+        {/* Timeline Display Section */}
+        {timeline.length > 0 && (
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Video Timeline</h2>
+              <button
+                onClick={() => {
+                  const timelineText = timeline
+                    .map(item => `${item.timestamp} ${item.text}`)
+                    .join('\n');
+                  navigator.clipboard.writeText(timelineText);
+                }}
+                className="text-blue-600 hover:text-blue-700 flex items-center gap-1"
+              >
+                <Copy className="w-4 h-4" /> Copy Timeline
+              </button>
             </div>
-          )}
-        </div>
+            <div className="space-y-3">
+              {timeline.map((item, index) => (
+                <div
+                  key={index}
+                  className="flex items-start gap-4 p-3 hover:bg-gray-50 rounded-lg transition-colors"
+                >
+                  <span className="text-blue-600 font-mono whitespace-nowrap">
+                    {item.timestamp}
+                  </span>
+                  <p className="text-gray-700">{item.text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Features Section */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {[
             {
-              title: 'Fast Processing',
-              description: 'Get your transcription results quickly and efficiently',
+              title: 'Automatic Timeline',
+              description: 'Get precise timestamps for key moments in your video',
             },
             {
-              title: 'High Accuracy',
-              description: 'Advanced AI ensures precise transcription results',
+              title: 'Smart Detection',
+              description: 'AI-powered detection of important video segments',
             },
             {
-              title: 'Easy to Use',
-              description: 'Simply paste your YouTube URL and click transcribe',
+              title: 'One-Click Copy',
+              description: 'Easily copy and use the generated timeline anywhere',
             },
           ].map((feature, index) => (
             <div
