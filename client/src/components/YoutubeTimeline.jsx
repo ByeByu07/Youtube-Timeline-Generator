@@ -16,7 +16,7 @@ const YoutubeTimeline = () => {
       console.log('Submitting URL:', url);
       console.log('Making request to server...');
       
-      const response = await fetch('http://localhost:8080/api/transcribe', {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/transcribe`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -135,7 +135,7 @@ const YoutubeTimeline = () => {
                         const formData = new FormData();
                         formData.append('video', file);
                         
-                        fetch('http://localhost:8080/api/upload', {
+                        fetch(`${process.env.REACT_APP_API_URL}/api/upload`, {
                           method: 'POST',
                           body: formData,
                         })
