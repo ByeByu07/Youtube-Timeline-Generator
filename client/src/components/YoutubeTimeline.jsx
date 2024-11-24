@@ -50,7 +50,23 @@ const YoutubeTimeline = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen relative overflow-hidden py-12 px-4 sm:px-6 lg:px-8">
+      {/* Animated background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-purple-500 via-pink-500 to-blue-500 animate-gradient opacity-10"></div>
+      
+      {/* Decorative circles */}
+      <div className="absolute top-0 right-0 -translate-y-1/4 translate-x-1/4">
+        <div className="w-96 h-96 bg-gradient-radial from-blue-400 to-transparent opacity-20 rounded-full blur-xl"></div>
+      </div>
+      <div className="absolute bottom-0 left-0 translate-y-1/4 -translate-x-1/4">
+        <div className="w-96 h-96 bg-gradient-radial from-purple-400 to-transparent opacity-20 rounded-full blur-xl"></div>
+      </div>
+      
+      {/* Mesh gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-conic from-white/80 via-white/60 to-white/80 mix-blend-overlay"></div>
+      
+      {/* Content container with backdrop blur */}
+      <div className="relative">
       <div className="max-w-3xl mx-auto">
         {/* Header Section */}
         <div className="text-center mb-12">
@@ -64,7 +80,7 @@ const YoutubeTimeline = () => {
         </div>
 
         {/* Form Section */}
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+        <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg p-6 mb-8 border border-white/20">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="url" className="block text-sm font-medium text-gray-700 mb-2">
@@ -124,7 +140,7 @@ const YoutubeTimeline = () => {
 
         {/* Timeline Display Section */}
         {timeline.length > 0 && (
-          <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+          <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg p-6 mb-8 border border-white/20">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">Video Timeline</h2>
               <button
@@ -173,7 +189,7 @@ const YoutubeTimeline = () => {
           ].map((feature, index) => (
             <div
               key={index}
-              className="bg-white rounded-lg p-6 shadow-md hover:shadow-lg transition-shadow"
+              className="bg-white/90 backdrop-blur-sm rounded-lg p-6 shadow-md hover:shadow-lg transition-all hover:bg-white/95 border border-white/20"
             >
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
                 {feature.title}
