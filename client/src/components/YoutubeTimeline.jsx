@@ -51,26 +51,26 @@ const YoutubeTimeline = () => {
 
   return (
     <div className="min-h-screen relative overflow-hidden py-12 px-4 sm:px-6 lg:px-8">
-      {/* Base gradient background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 via-purple-500/20 to-pink-500/20 animate-gradient"></div>
+      {/* Futuristic Background Layers */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-900/30 via-indigo-900/30 to-purple-900/30 animate-gradient"></div>
+      <div className="absolute inset-0 bg-circuit-pattern opacity-20"></div>
+      <div className="absolute inset-0 bg-hex-pattern opacity-10"></div>
       
-      {/* Dot pattern overlay */}
-      <div className="absolute inset-0 bg-gradient-dots [background-size:20px_20px] opacity-50"></div>
+      {/* Animated Geometric Shapes */}
+      <div className="absolute top-20 right-20 w-96 h-96 bg-gradient-conic from-blue-500/20 via-cyan-500/20 to-blue-500/20 rounded-full animate-spin-slow"></div>
+      <div className="absolute -bottom-20 -left-20 w-[40rem] h-[40rem] bg-gradient-radial from-purple-500/20 to-transparent rounded-full animate-float"></div>
       
-      {/* Mesh grid overlay */}
-      <div className="absolute inset-0 bg-gradient-mesh [background-size:40px_40px] opacity-30"></div>
+      {/* Glowing Lines */}
+      <div className="absolute left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent top-20 animate-pulse"></div>
+      <div className="absolute left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-purple-500/50 to-transparent bottom-20 animate-pulse delay-700"></div>
       
-      {/* Floating orbs */}
-      <div className="absolute top-20 right-20 w-72 h-72 bg-gradient-radial from-blue-400/30 to-transparent rounded-full blur-2xl animate-pulse"></div>
-      <div className="absolute bottom-20 left-20 w-96 h-96 bg-gradient-radial from-purple-400/30 to-transparent rounded-full blur-2xl animate-pulse delay-700"></div>
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-gradient-radial from-pink-400/30 to-transparent rounded-full blur-xl animate-pulse delay-1000"></div>
+      {/* Processing Animation (visible when isLoading is true) */}
+      {isLoading && (
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 animate-processing"></div>
+      )}
       
-      {/* Glass morphism layer */}
-      <div className="absolute inset-0 backdrop-blur-[2px]"></div>
-      
-      {/* Gradient accent lines */}
-      <div className="absolute left-0 right-0 h-px bg-gradient-to-r from-transparent via-pink-500/20 to-transparent top-20"></div>
-      <div className="absolute left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-500/20 to-transparent bottom-20"></div>
+      {/* Glassmorphism Effect */}
+      <div className="absolute inset-0 backdrop-blur-[1px]"></div>
       
       {/* Content container with backdrop blur */}
       <div className="relative">
