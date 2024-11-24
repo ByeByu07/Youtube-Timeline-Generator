@@ -8,8 +8,15 @@ import ytdl from 'ytdl-core';
 import axios from 'axios';
 import fs from 'fs';
 import os from 'os';
+import pkg from 'miniget';
+// import { exec } from 'yt-dlp-exec';
+const { MinigetError, exec : ytDlpExec } = pkg;
+import ffmpeg from 'fluent-ffmpeg';
+import { promisify } from 'util';
+import { exec } from 'child_process';
 
 config();
+const execAsync = promisify(exec);
 
 // Initialize AssemblyAI configuration
 const apiKey = process.env.ASSEMBLY_AI_API_KEY;
@@ -38,6 +45,12 @@ interface AssemblyAIResponse {
 
 interface AssemblyAIUploadResponse {
   upload_url: string;
+}
+
+interface AudioDownloadResponse {
+  success: boolean;
+  filePath?: string;
+  error?: string;
 }
 
 // ES Module compatibility
@@ -120,92 +133,163 @@ async function createAndWaitForTranscript(audioUrl: string): Promise<AssemblyAIR
   }
 }
 
+async function getYoutubeCookie(): Promise<string> {
+  try {
+    // Try to get cookie from environment variable first
+    const cookieFromEnv = process.env.YOUTUBE_COOKIE;
+    if (cookieFromEnv) {
+      return cookieFromEnv;
+    }
+
+    // If no cookie in env, create a minimal cookie
+    return 'CONSENT=YES+; Path=/; Domain=.youtube.com';
+  } catch (error) {
+    console.error('Error getting YouTube cookie:', error);
+    return 'CONSENT=YES+; Path=/; Domain=.youtube.com';
+  }
+}
+
 // Function to process YouTube video
 async function processYouTubeVideo(url: string): Promise<TimelineSection[]> {
+  let tempFile: string | null = null;
+  let audioFile: string | null = null;
+  
   try {
     console.log('Starting YouTube video processing for:', url);
     
-    // Create temporary file path
+    // Create temporary file paths
     const tempDir = os.tmpdir();
-    const tempFile = path.join(tempDir, `youtube-${Date.now()}.mp4`);
-    console.log('Temporary file path:', tempFile);
+    const timestamp = Date.now();
+    tempFile = path.join(tempDir, `video-${timestamp}.mp4`);
+    audioFile = path.join(tempDir, `audio-${timestamp}.mp3`);
 
-    // Download audio from YouTube
-    console.log('Downloading audio...');
-    await new Promise((resolve, reject) => {
-      const writeStream = fs.createWriteStream(tempFile);
-      const stream = ytdl(url, { 
-        quality: 'lowestaudio',
-        filter: 'audioonly' 
-      });
-
-      // Handle stream events
-      stream.on('info', (info) => {
-        console.log('Video info received:', info.videoDetails.title);
-      });
-
-      stream.on('error', (err) => {
-        console.error('Error in ytdl stream:', err);
-        writeStream.end();
-        reject(err);
-      });
-
-      // Handle write stream events
-      writeStream.on('error', (err) => {
-        console.error('Error in write stream:', err);
-        stream.destroy();
-        reject(err);
-      });
-
-      writeStream.on('finish', () => {
-        console.log('Audio download completed');
-        resolve(null);
-      });
-
-      // Pipe with error handling
-      stream.pipe(writeStream)
-        .on('error', (err) => {
-          console.error('Error in pipe:', err);
-          stream.destroy();
-          writeStream.end();
-          reject(err);
-        });
-
-      // Set timeout
-      const timeout = setTimeout(() => {
-        stream.destroy();
-        writeStream.end();
-        reject(new Error('Download timeout after 5 minutes'));
-      }, 5 * 60 * 1000); // 5 minutes timeout
-
-      // Clear timeout on success
-      writeStream.on('finish', () => clearTimeout(timeout));
+    console.log('Downloading video...');
+    
+    // Download video using yt-dlp
+    await ytDlpExec(url, {
+      output: tempFile,
+      format: 'bestaudio[ext=m4a]/bestaudio',
+      extractAudio: true,
+      audioFormat: 'mp3',
+      audioQuality: 0, // best quality
+      noCheckCertificates: true,
+      noWarnings: true,
+      preferFfmpeg: true,
+      progress: true, // Show progress bar
+      //@ts-ignore
+      addHeader: [
+        'User-Agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept:text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language:en-US,en;q=0.5',
+        'Connection:keep-alive'
+      ]
     });
 
+    console.log('Download completed. Converting to audio...');
+
     // Upload to AssemblyAI
-    const uploadUrl = await uploadAudio(tempFile);
+    console.log('Uploading to AssemblyAI...');
+    const uploadUrl = await uploadAudio(audioFile);
 
     // Create and wait for transcript
+    console.log('Processing transcript...');
     const result = await createAndWaitForTranscript(uploadUrl);
-
-    // Clean up temporary file
-    fs.unlinkSync(tempFile);
 
     if (!result.chapters || result.chapters.length === 0) {
       throw new Error('No chapters were generated for this video');
     }
 
-    console.log('unlink');
-
     // Format the chapters into timeline sections
-    return result.chapters!.map((chapter: AssemblyAIChapter, index: number) => ({
+    const timeline = result.chapters.map((chapter: AssemblyAIChapter, index: number) => ({
       timestamp: formatTimestamp(chapter.start / 1000),
       text: `Chapter ${(index + 1).toString().padStart(2, '0')}: ${chapter.headline}`
     }));
 
-  } catch (error) {
-    console.error('Error processing video:', error);
-    throw new Error('Failed to process video');
+    return timeline;
+
+  } catch (error: any) {
+    console.error('Error in processYouTubeVideo:', error);
+    throw new Error(error.message || 'Failed to process video');
+  } finally {
+    // Clean up temporary files
+    for (const file of [tempFile, audioFile]) {
+      if (file && fs.existsSync(file)) {
+        try {
+          fs.unlinkSync(file);
+          console.log(`Cleaned up temporary file: ${file}`);
+        } catch (error) {
+          console.error(`Error cleaning up file ${file}:`, error);
+        }
+      }
+    }
+  }
+}
+
+async function downloadYouTubeAudio(url: string, format: string = 'mp3'): Promise<AudioDownloadResponse> {
+  try {
+    // Create a unique filename
+    const tempDir = os.tmpdir();
+    const filename = `audio-${Date.now()}.${format}`;
+    const outputPath = path.join(tempDir, filename);
+
+    // Get video info
+    const info = await ytdl.getInfo(url);
+    const videoTitle = info.videoDetails.title.replace(/[^a-zA-Z0-9]/g, '_');
+
+    // Download audio
+    return new Promise((resolve, reject) => {
+      const writeStream = fs.createWriteStream(outputPath);
+      const stream = ytdl(url, {
+        quality: 'highestaudio',
+        filter: 'audioonly',
+        requestOptions: {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Connection': 'keep-alive',
+          }
+        }
+      });
+
+      // Handle download progress
+      let downloadProgress = 0;
+      stream.on('progress', (_, downloaded, total) => {
+        const progress = Math.floor((downloaded / total) * 100);
+        if (progress > downloadProgress + 10) {
+          downloadProgress = progress;
+          console.log(`Download progress: ${progress}%`);
+        }
+      });
+
+      stream.pipe(writeStream);
+
+      writeStream.on('finish', () => {
+        resolve({
+          success: true,
+          filePath: outputPath
+        });
+      });
+
+      writeStream.on('error', (error) => {
+        reject({
+          success: false,
+          error: error.message
+        });
+      });
+
+      stream.on('error', (error) => {
+        reject({
+          success: false,
+          error: error.message
+        });
+      });
+    });
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.message
+    };
   }
 }
 

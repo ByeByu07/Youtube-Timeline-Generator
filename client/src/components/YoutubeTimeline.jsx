@@ -200,6 +200,7 @@ const YoutubeTimeline = () => {
         </div>
       </div>
     </div>
+    </div>
   )
 };
 
