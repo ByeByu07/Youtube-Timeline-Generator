@@ -51,19 +51,26 @@ const YoutubeTimeline = () => {
 
   return (
     <div className="min-h-screen relative overflow-hidden py-12 px-4 sm:px-6 lg:px-8">
-      {/* Animated background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-500 via-pink-500 to-blue-500 animate-gradient opacity-10"></div>
+      {/* Base gradient background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 via-purple-500/20 to-pink-500/20 animate-gradient"></div>
       
-      {/* Decorative circles */}
-      <div className="absolute top-0 right-0 -translate-y-1/4 translate-x-1/4">
-        <div className="w-96 h-96 bg-gradient-radial from-blue-400 to-transparent opacity-20 rounded-full blur-xl"></div>
-      </div>
-      <div className="absolute bottom-0 left-0 translate-y-1/4 -translate-x-1/4">
-        <div className="w-96 h-96 bg-gradient-radial from-purple-400 to-transparent opacity-20 rounded-full blur-xl"></div>
-      </div>
+      {/* Dot pattern overlay */}
+      <div className="absolute inset-0 bg-gradient-dots [background-size:20px_20px] opacity-50"></div>
       
-      {/* Mesh gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-conic from-white/80 via-white/60 to-white/80 mix-blend-overlay"></div>
+      {/* Mesh grid overlay */}
+      <div className="absolute inset-0 bg-gradient-mesh [background-size:40px_40px] opacity-30"></div>
+      
+      {/* Floating orbs */}
+      <div className="absolute top-20 right-20 w-72 h-72 bg-gradient-radial from-blue-400/30 to-transparent rounded-full blur-2xl animate-pulse"></div>
+      <div className="absolute bottom-20 left-20 w-96 h-96 bg-gradient-radial from-purple-400/30 to-transparent rounded-full blur-2xl animate-pulse delay-700"></div>
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-gradient-radial from-pink-400/30 to-transparent rounded-full blur-xl animate-pulse delay-1000"></div>
+      
+      {/* Glass morphism layer */}
+      <div className="absolute inset-0 backdrop-blur-[2px]"></div>
+      
+      {/* Gradient accent lines */}
+      <div className="absolute left-0 right-0 h-px bg-gradient-to-r from-transparent via-pink-500/20 to-transparent top-20"></div>
+      <div className="absolute left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-500/20 to-transparent bottom-20"></div>
       
       {/* Content container with backdrop blur */}
       <div className="relative">
