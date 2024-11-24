@@ -52,7 +52,7 @@ const YoutubeTimeline = () => {
   return (
     <div className="min-h-screen relative overflow-hidden py-12 px-4 sm:px-6 lg:px-8">
       {/* Futuristic Background Layers */}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-900/30 via-indigo-900/30 to-purple-900/30 animate-gradient"></div>
+      <div className="absolute inset-0 bg-gradient-to-br from-primary-900/40 via-secondary-800/40 to-primary-800/40 animate-gradient"></div>
       <div className="absolute inset-0 bg-circuit-pattern opacity-20"></div>
       <div className="absolute inset-0 bg-hex-pattern opacity-10"></div>
       
@@ -117,7 +117,11 @@ const YoutubeTimeline = () => {
                   </button>
                 </div>
 
-                <div className="flex items-center gap-4 p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 transition-colors">
+                <div className={`flex items-center gap-4 p-4 border-2 border-dashed rounded-lg transition-all duration-300 ${
+                  isLoading 
+                    ? 'border-primary-500 bg-gradient-to-r from-primary-50 to-secondary-50 animate-shimmer'
+                    : 'border-gray-300 hover:border-primary-500 hover:bg-gradient-to-r hover:from-primary-50/50 hover:to-secondary-50/50'
+                }`}>
                   <input
                     type="file"
                     id="video-upload"
@@ -154,7 +158,11 @@ const YoutubeTimeline = () => {
                   />
                   <label
                     htmlFor="video-upload"
-                    className="flex-1 flex items-center justify-center gap-2 py-3 text-gray-600 hover:text-blue-600 cursor-pointer"
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 cursor-pointer transition-all duration-300 ${
+                      isLoading
+                        ? 'text-primary-600 animate-upload-pulse'
+                        : 'text-gray-600 hover:text-primary-600'
+                    }`}
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
@@ -224,7 +232,7 @@ const YoutubeTimeline = () => {
           ].map((feature, index) => (
             <div
               key={index}
-              className="bg-white/90 backdrop-blur-sm rounded-lg p-6 shadow-md hover:shadow-lg transition-all hover:bg-white/95 border border-white/20"
+              className="bg-gradient-to-br from-white/95 to-white/90 backdrop-blur-sm rounded-lg p-6 shadow-md hover:shadow-xl transition-all duration-300 hover:scale-105 border border-white/20 hover:border-primary-200"
             >
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
                 {feature.title}
