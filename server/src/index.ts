@@ -13,9 +13,6 @@ config();
 
 // Initialize AssemblyAI configuration
 const apiKey = process.env.ASSEMBLY_AI_API_KEY;
-if (!apiKey) {
-  throw new Error('ASSEMBLY_AI_API_KEY is not defined');
-}
 
 const ASSEMBLY_AI_API = 'https://api.assemblyai.com/v2';
 
@@ -59,10 +56,12 @@ const server = createServer(app);
 // Middleware
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? process.env.CLIENT_URL 
+    ? ['https://youtube-timeline-generator-production.up.railway.app', 'https://youtube-timeline-generator-production.up.railway.app/']
     : 'http://localhost:5173',
-  methods: ['GET', 'POST'],
-  credentials: true}));
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));

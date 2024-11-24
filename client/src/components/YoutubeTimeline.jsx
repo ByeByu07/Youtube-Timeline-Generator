@@ -16,7 +16,7 @@ const YoutubeTimeline = () => {
       console.log('Submitting URL:', url);
       console.log('Making request to server...');
       
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/transcribe`, {
+      const response = await fetch(`${import.meta.env.VITE_APP_API_URL}/api/transcribe`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -77,9 +77,16 @@ const YoutubeTimeline = () => {
       <div className="max-w-3xl mx-auto">
         {/* Header Section */}
         <div className="text-center mb-12">
-          <YoutubeIcon className="w-16 h-16 text-red-600 mx-auto mb-4" />
+        <div className="flex flex-col items-center">
+          <div className="flex items-center justify-center mb-4">
+            <img src="/timelify_logo.png" alt="" width={64} className="ml-4" />
+            <YoutubeIcon className="w-16 h-16 text-red-600" />
+          </div>
+        </div>
+          {/* <YoutubeIcon className="w-16 h-16 text-red-600 mx-auto mb-4" />
+          <img src="/timelify_logo.png" alt="" srcset="" width={40}/> */}
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            YouTube Transcriber
+            Timelify - Timeline AI for YouTube
           </h1>
           <p className="text-xl text-gray-600">
             {quotes[Math.floor(Math.random() * quotes.length)]}
@@ -135,7 +142,7 @@ const YoutubeTimeline = () => {
                         const formData = new FormData();
                         formData.append('video', file);
                         
-                        fetch(`${process.env.REACT_APP_API_URL}/api/upload`, {
+                        fetch(`${import.meta.env.VITE_APP_API_URL}/api/upload`, {
                           method: 'POST',
                           body: formData,
                         })
