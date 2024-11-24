@@ -70,27 +70,47 @@ const YoutubeTimeline = () => {
               <label htmlFor="url" className="block text-sm font-medium text-gray-700 mb-2">
                 YouTube URL
               </label>
-              <div className="flex gap-4">
-                <input
-                  type="url"
-                  id="url"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  placeholder="https://www.youtube.com/watch?v=..."
-                  className="flex-1 block w-full rounded-lg border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-3 border"
-                  required
-                />
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className={`px-6 py-3 rounded-lg text-white font-medium ${
-                    isLoading
-                      ? 'bg-gray-400 cursor-not-allowed'
-                      : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
-                  }`}
-                >
-                  {isLoading ? 'Processing...' : 'Transcribe'}
-                </button>
+              <div className="space-y-4">
+                <div className="flex gap-4 relative">
+                  <input
+                    type="url"
+                    id="url"
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                    placeholder="https://www.youtube.com/watch?v=..."
+                    className="flex-1 block w-full rounded-lg border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-3 border opacity-50 cursor-not-allowed"
+                    disabled
+                    required
+                  />
+                  <div className="absolute -top-3 right-24 bg-yellow-400 text-xs font-bold px-2 py-1 rounded-full text-yellow-900">
+                    Coming Soon
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={true}
+                    className="px-6 py-3 rounded-lg text-white font-medium bg-gray-400 cursor-not-allowed"
+                  >
+                    Transcribe
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-4 p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 transition-colors">
+                  <input
+                    type="file"
+                    id="video-upload"
+                    className="hidden"
+                    accept="video/*"
+                  />
+                  <label
+                    htmlFor="video-upload"
+                    className="flex-1 flex items-center justify-center gap-2 py-3 text-gray-600 hover:text-blue-600 cursor-pointer"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    <span>Upload Video File</span>
+                  </label>
+                </div>
               </div>
             </div>
           </form>
