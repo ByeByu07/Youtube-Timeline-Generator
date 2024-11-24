@@ -1,4 +1,5 @@
 import express, { Request, Response, NextFunction } from 'express';
+import multer from 'multer';
 import { createServer } from 'http';
 import cors from 'cors';
 import path from 'path';
@@ -72,6 +73,14 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Configure multer for file uploads
+const upload = multer({
+  dest: os.tmpdir(),
+  limits: {
+    fileSize: 100 * 1024 * 1024, // 100MB limit
+  },
+});
 
 // Log all incoming requests
 app.use((req: Request, res: Response, next: NextFunction) => {
@@ -298,8 +307,54 @@ app.get('/api/health', (req: Request, res: Response) => {
   res.json({ status: 'ok' });
 });
 
+// File upload and processing route
+app.post('/api/upload', upload.single('video'), async (req: Request, res: Response) => {
+  console.log('=== File Upload Request Started ===');
+  
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    console.log('Processing uploaded file:', req.file.path);
+    
+    // Upload to AssemblyAI
+    console.log('Uploading to AssemblyAI...');
+    const uploadUrl = await uploadAudio(req.file.path);
+
+    // Create and wait for transcript
+    console.log('Processing transcript...');
+    const result = await createAndWaitForTranscript(uploadUrl);
+
+    if (!result.chapters || result.chapters.length === 0) {
+      throw new Error('No chapters were generated for this video');
+    }
+
+    // Format the chapters into timeline sections
+    const timeline = result.chapters.map((chapter: AssemblyAIChapter, index: number) => ({
+      timestamp: formatTimestamp(chapter.start / 1000),
+      text: `Chapter ${(index + 1).toString().padStart(2, '0')}: ${chapter.headline}`
+    }));
+
+    // Clean up the temporary file
+    try {
+      fs.unlinkSync(req.file.path);
+      console.log('Cleaned up temporary file');
+    } catch (error) {
+      console.error('Error cleaning up temporary file:', error);
+    }
+
+    res.json({ timeline });
+  } catch (error: any) {
+    console.error('Error processing upload:', error);
+    res.status(500).json({ 
+      error: 'Failed to process video',
+      details: error.message 
+    });
+  }
+});
+
 // YouTube processing route
-//@ts-ignore
 app.post('/api/transcribe', async (req: Request, res: Response) => {
   console.log('=== Transcribe Request Started ===');
   console.log('Request headers:', req.headers);

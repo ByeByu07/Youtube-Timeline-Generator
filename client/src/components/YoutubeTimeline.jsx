@@ -116,6 +116,34 @@ const YoutubeTimeline = () => {
                     id="video-upload"
                     className="hidden"
                     accept="video/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setIsLoading(true);
+                        setError('');
+                        const formData = new FormData();
+                        formData.append('video', file);
+                        
+                        fetch('http://localhost:8080/api/upload', {
+                          method: 'POST',
+                          body: formData,
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                          if (data.timeline) {
+                            setTimeline(data.timeline);
+                          } else {
+                            throw new Error(data.error || 'Failed to process video');
+                          }
+                        })
+                        .catch(err => {
+                          setError(err.message || 'An unexpected error occurred');
+                        })
+                        .finally(() => {
+                          setIsLoading(false);
+                        });
+                      }
+                    }}
                   />
                   <label
                     htmlFor="video-upload"
